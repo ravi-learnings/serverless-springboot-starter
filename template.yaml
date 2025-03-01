@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: A sample template for Serverless SpringBoot application with the aws-serverless-java-container library
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: The environment that the application is deployed to.
+
+Resources:
+  restApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
+  lambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: com.learnings.serverless_springboot.lambda.LambdaHandler::handleRequest
+      Runtime: java17
+      MemorySize: 512
+      Timeout: 30
+      Policies: AWSLambdaBasicExecutionRole
+      Environment:
+          Variables:
+            ENVIRONMENT: !Ref Environment
+      Events:
+        RestApiEvent:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+Outputs:
+  ApiEndpoint:
+    Description: URL for the Spring Boot API
+    Value: !Sub https://${restApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/
+
+  LambdaFunction:
+    Description: ARN of the Lambda function
+    Value: !GetAtt lambdaFunction.Arn
