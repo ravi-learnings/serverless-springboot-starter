@@ -86,6 +86,7 @@ jobs:
 
       - name: Upload Packaged template
         run: |
+          S3_BUCKET="${{ vars.S3_BUCKET || 'serverless-springboot-deployment-bucket' }}-${{ github.event.inputs.environment || 'dev' }}"
           aws s3 cp packaged.yaml s3://${S3_BUCKET}/
 
       - name: Get API Gateway URL
