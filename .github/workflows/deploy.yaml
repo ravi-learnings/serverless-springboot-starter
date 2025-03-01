@@ -1,0 +1,112 @@
+name: Deploy Serverless Spring boot Application
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  id-token: write   # Required for requesting the JWT
+  contents: read    # Required for actions/checkout
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn --batch-mode --update-snapshots verify
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN || secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Set up SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      - name: SAM Package
+        run: |
+          STACK_NAME="${{ vars.STACK_NAME_PREFIX || 'serverless-springboot' }}-${{ github.event.inputs.environment || 'dev' }}"
+          S3_BUCKET="${{ vars.S3_BUCKET || 'serverless-springboot-deployment-bucket' }}-${{ github.event.inputs.environment || 'dev' }}"
+          TEMPLATE_FILE="${{ vars.TEMPLATE_FILE || 'template.yaml' }}"
+          
+          # Create S3 bucket if it doesn't exist
+          if ! aws s3 ls "s3://${S3_BUCKET}" 2>&1 > /dev/null; then
+            echo "Creating S3 bucket: ${S3_BUCKET}"
+            aws s3 mb "s3://${S3_BUCKET}"
+          else
+            echo "S3 bucket already exists: ${S3_BUCKET}"
+          fi
+          
+          # Package application
+          sam package \
+            --template-file ${TEMPLATE_FILE} \
+            --output-template-file packaged.yaml \
+            --s3-bucket ${S3_BUCKET}
+
+      - name: SAM Deploy
+        run: |
+          STACK_NAME="${{ vars.STACK_NAME_PREFIX || 'serverless-springboot' }}-${{ github.event.inputs.environment || 'dev' }}"
+          
+          # Deploy application
+          sam deploy \
+            --template-file packaged.yaml \
+            --stack-name ${STACK_NAME} \
+            --capabilities CAPABILITY_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              Environment=${{ github.event.inputs.environment || 'dev' }}
+
+      - name: Get API Gateway URL
+        run: |
+          STACK_NAME="${{ vars.STACK_NAME_PREFIX || 'serverless-springboot' }}-${{ github.event.inputs.environment || 'dev' }}"
+          
+          # Get API Gateway URL and save as output
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${STACK_NAME} \
+            --query "Stacks[0].Outputs[?OutputKey=='restApi'].OutputValue" \
+            --output text)
+          
+          echo "API_URL=${API_URL}" >> $GITHUB_ENV
+          echo "API Gateway URL: ${API_URL}"
+
+      - name: Verify Deployment
+        run: |
+          echo "Verifying deployment by calling API endpoint..."
+          curl -s ${API_URL}api/v1/health-check
+          echo ""
+          echo "Deployment verification complete."
+
+      - name: Deployment Summary
+        run: |
+          echo "## Deployment Summary :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "* **Environment:** ${{ github.event.inputs.environment || 'dev' }}" >> $GITHUB_STEP_SUMMARY
+          echo "* **Stack Name:** ${{ vars.STACK_NAME_PREFIX || 'serverless-springboot' }}-${{ github.event.inputs.environment || 'dev' }}" >> $GITHUB_STEP_SUMMARY
+          echo "* **API Gateway URL:** ${API_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "* **Test Endpoints:**" >> $GITHUB_STEP_SUMMARY
+          echo "  * GET: \`${API_URL}api/hello\`" >> $GITHUB_STEP_SUMMARY
+          echo "  * POST: \`${API_URL}api/message\`" >> $GITHUB_STEP_SUMMARY
