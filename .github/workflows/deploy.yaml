@@ -62,9 +62,12 @@ jobs:
             echo "S3 bucket already exists: ${S3_BUCKET}"
           fi
           
+          # Building application
+          sam build
+
           # Package application
           sam package \
-            --template-file ${TEMPLATE_FILE} \
+            --template-file .aws-sam/build/${TEMPLATE_FILE} \
             --output-template-file packaged.yaml \
             --s3-bucket ${S3_BUCKET}
 
@@ -80,6 +83,10 @@ jobs:
             --no-fail-on-empty-changeset \
             --parameter-overrides \
               Environment=${{ github.event.inputs.environment || 'dev' }}
+
+      - name: Upload Packaged template
+        run: |
+          aws s3 cp packaged.yaml s3://${S3_BUCKET}/
 
       - name: Get API Gateway URL
         run: |
