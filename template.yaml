@@ -23,6 +23,7 @@ Resources:
   lambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
+      CodeUri: .
       Handler: com.learnings.serverless_springboot.lambda.LambdaHandler::handleRequest
       Runtime: java17
       MemorySize: 512
