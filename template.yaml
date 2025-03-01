@@ -11,6 +11,10 @@ Parameters:
       - prod
     Description: The environment that the application is deployed to.
 
+Conditions:
+  IsProd: !Equals [!Ref Environment, prod]
+  IsDev: !Equals [!Ref Environment, dev]
+
 Resources:
   restApi:
     Type: AWS::Serverless::Api
@@ -33,6 +37,12 @@ Resources:
           Properties:
             Path: /{proxy+}
             Method: ANY
+  # CloudWatch Log Group with retention
+  lambdaFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${lambdaFunction}
+      RetentionInDays: !If [IsProd, 30, 3]
 
 Outputs:
   ApiEndpoint:
