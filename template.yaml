@@ -37,6 +37,7 @@ Resources:
           Properties:
             Path: /{proxy+}
             Method: ANY
+            RestApiId: !Ref restApi
   # CloudWatch Log Group with retention
   lambdaFunctionLogGroup:
     Type: AWS::Logs::LogGroup
