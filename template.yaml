@@ -29,14 +29,16 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: !Ref Environment
+      EndpointConfiguration:
+        Type: REGIONAL
 
-#  basePathMapping:
-#    Type: AWS::ApiGateway::BasePathMapping
-#    Properties:
-#      DomainName: !Ref CustomDomainName
-#      RestApiId: !Ref restApi
-#      Stage: !Ref Environment
-#      BasePath: app1
+  basePathMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      DomainName: !ImportValue domain-stack-CustomDomainName
+      RestApiId: !Ref restApi
+      Stage: !Ref Environment
+      BasePath: app1
 
   lambdaFunction:
     Type: AWS::Serverless::Function
@@ -72,9 +74,3 @@ Outputs:
   LambdaFunction:
     Description: ARN of the Lambda function
     Value: !GetAtt lambdaFunction.Arn
-
-#  CustomDomainName:
-#    Description: Custom Domain Name
-#    Value: !Ref CustomDomainName
-#    Export:
-#      Name: !Sub ${AWS::StackName}-CustomDomainName
