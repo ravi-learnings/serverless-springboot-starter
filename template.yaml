@@ -73,8 +73,8 @@ Outputs:
     Description: ARN of the Lambda function
     Value: !GetAtt lambdaFunction.Arn
 
-  CustomDomainName:
-    Description: Custom Domain Name
-    Value: !Ref CustomDomainName
-    Export:
-      Name: !Sub ${AWS::StackName}-CustomDomainName
+#  CustomDomainName:
+#    Description: Custom Domain Name
+#    Value: !Ref CustomDomainName
+#    Export:
+#      Name: !Sub ${AWS::StackName}-CustomDomainName
