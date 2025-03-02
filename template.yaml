@@ -25,28 +25,18 @@ Conditions:
   IsDev: !Equals [!Ref Environment, dev]
 
 Resources:
-  CustomDomainName:
-    Type: AWS::ApiGateway::DomainName
-    Properties:
-      DomainName: !FindInMap [DomainMapping, !Ref Environment, DomainName]
-      CertificateArn: !FindInMap [DomainMapping, !Ref Environment, CertificateArn]
-      EndpointConfiguration:
-        Types:
-          - REGIONAL
-
   restApi:
     Type: AWS::Serverless::Api
     Properties:
       StageName: !Ref Environment
 
-  basePathMapping:
-    Type: AWS::ApiGateway::BasePathMapping
-    DependsOn: CustomDomainName
-    Properties:
-      DomainName: !Ref CustomDomainName
-      RestApiId: !Ref restApi
-      Stage: !Ref Environment
-      BasePath: users
+#  basePathMapping:
+#    Type: AWS::ApiGateway::BasePathMapping
+#    Properties:
+#      DomainName: !Ref CustomDomainName
+#      RestApiId: !Ref restApi
+#      Stage: !Ref Environment
+#      BasePath: app1
 
   lambdaFunction:
     Type: AWS::Serverless::Function
