@@ -106,3 +106,39 @@ Resources:
       Stage: Prod
       BasePath: users
 ```
+
+# Handling Requests with Custom Domain mapped with base path
+
+When a base path mapping is configured for a custom domain, the API Gateway routes requests to the appropriate API based on the base path.
+
+For example, if a request is made to the custom domain with the base path "/api", the API Gateway routes the request to the API associated with the base path "/api".
+
+Since our backend will not have the base path in the URL, we need to strip the base path before forwarding the request to the backend.
+
+```java
+    @Override
+    public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context)
+            throws IOException {
+        logger.info("Handling Request");
+
+        AwsProxyRequest requestEvent = new ObjectMapper().readValue(inputStream, AwsProxyRequest.class);
+
+        logger.info("Received Request is : {}", requestEvent);
+
+        String path = requestEvent.getPath();
+        if (path != null && path.startsWith(BASE_PATH)) {
+            path = path.substring(BASE_PATH.length());
+            // Make sure the path starts with a slash
+            if (!path.startsWith("/")) {
+                path = "/" + path;
+            }
+            // Update the path in the request
+            requestEvent.setPath(path);
+        }
+
+        ByteArrayOutputStream modifiedRequest = new ByteArrayOutputStream();
+        new ObjectMapper().writeValue(modifiedRequest, requestEvent);
+
+        handler.proxyStream(new ByteArrayInputStream(modifiedRequest.toByteArray()), outputStream, context);
+    }
+```
