@@ -64,11 +64,10 @@ Resources:
     Type: AWS::ApiGateway::DomainName
     Properties:
       DomainName: api.example.com
-      CertificateArn: !Ref CertificateArn
+      CertificateArn: !Ref CertificateArn  // use RegionalCertificateArn for regional endpoint
       EndpointConfiguration:
         Types:
-          - EDGE
-      SecurityPolicy: TLS_1_2
+          - EDGE // or REGIONAL
 
 Parameters:
   CertificateArn:
