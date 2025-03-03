@@ -6,13 +6,18 @@ import com.amazonaws.serverless.proxy.model.AwsProxyResponse;
 import com.amazonaws.serverless.proxy.spring.SpringBootLambdaContainerHandler;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.learnings.serverless_springboot.ServerlessSpringbootApplication;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 
 public class LambdaHandler implements RequestStreamHandler {
+    private static final Logger logger = LoggerFactory.getLogger(LambdaHandler.class);
+
+    private static final String BASE_PATH = "/app1"; // adjust to your base path
+
     private static SpringBootLambdaContainerHandler<AwsProxyRequest, AwsProxyResponse> handler;
     static {
         try {
@@ -29,6 +34,26 @@ public class LambdaHandler implements RequestStreamHandler {
     @Override
     public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context)
             throws IOException {
-        handler.proxyStream(inputStream, outputStream, context);
+        logger.info("Handling Request");
+
+        AwsProxyRequest requestEvent = new ObjectMapper().readValue(inputStream, AwsProxyRequest.class);
+
+        logger.info("Received Request is : {}", requestEvent);
+
+        String path = requestEvent.getPath();
+        if (path != null && path.startsWith(BASE_PATH)) {
+            path = path.substring(BASE_PATH.length());
+            // Make sure the path starts with a slash
+            if (!path.startsWith("/")) {
+                path = "/" + path;
+            }
+            // Update the path in the request
+            requestEvent.setPath(path);
+        }
+
+        ByteArrayOutputStream modifiedRequest = new ByteArrayOutputStream();
+        new ObjectMapper().writeValue(modifiedRequest, requestEvent);
+
+        handler.proxyStream(new ByteArrayInputStream(modifiedRequest.toByteArray()), outputStream, context);
     }
 }
