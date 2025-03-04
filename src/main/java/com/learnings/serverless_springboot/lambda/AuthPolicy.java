@@ -17,13 +17,23 @@ public class AuthPolicy {
 
     transient PolicyDocument policyDocumentObject;
     Map<String, Object> policyDocument;
+    Map<String, String> context;
 
-    public AuthPolicy(String principalId, AuthPolicy.PolicyDocument policyDocumentObject) {
+    public AuthPolicy(String principalId, AuthPolicy.PolicyDocument policyDocumentObject, Map<String, String> context) {
         this.principalId = principalId;
         this.policyDocumentObject = policyDocumentObject;
+        this.context = context;
     }
 
     public AuthPolicy() {
+    }
+
+    public Map<String, String> getContext() {
+        return context;
+    }
+
+    public void setContext(Map<String, String> context) {
+        this.context = context;
     }
 
     public String getPrincipalId() {

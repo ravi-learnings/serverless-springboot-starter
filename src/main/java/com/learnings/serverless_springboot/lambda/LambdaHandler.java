@@ -39,6 +39,10 @@ public class LambdaHandler implements RequestStreamHandler {
         AwsProxyRequest requestEvent = new ObjectMapper().readValue(inputStream, AwsProxyRequest.class);
 
         logger.info("Received Request is : {}", requestEvent);
+        if (requestEvent.getRequestContext() != null && requestEvent.getRequestContext().getAuthorizer() != null) {
+            logger.info("Received context is: {}", requestEvent.getRequestContext().getAuthorizer().getContextValue(("idToken")));
+        }
+
 
         String path = requestEvent.getPath();
         if (path != null && path.startsWith(BASE_PATH)) {

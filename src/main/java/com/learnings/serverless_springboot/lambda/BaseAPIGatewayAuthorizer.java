@@ -10,11 +10,11 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 
-public class BaseAPIGatewayAuthorizer implements RequestHandler<APIGatewayCustomAuthorizerEvent, ApiGatewayCustomAuthorizerResponse> {
+public class BaseAPIGatewayAuthorizer implements RequestHandler<APIGatewayCustomAuthorizerEvent, AuthPolicy> {
 
     private static final Logger logger = LoggerFactory.getLogger(BaseAPIGatewayAuthorizer.class);
     @Override
-    public ApiGatewayCustomAuthorizerResponse handleRequest(APIGatewayCustomAuthorizerEvent input, Context context) {
+    public AuthPolicy handleRequest(APIGatewayCustomAuthorizerEvent input, Context context) {
         // Token will be provided in cookies - so retrieve the cookies "sessionToken" from the input headers
         String sessionToken = getSessionTokenFromCookies(input);
 
@@ -61,19 +61,16 @@ public class BaseAPIGatewayAuthorizer implements RequestHandler<APIGatewayCustom
         // and will apply to subsequent calls to any method/resource in the RestApi
         // made with the same token
 
-        AuthPolicy.PolicyDocument policyDocument = AuthPolicy.PolicyDocument.getAllowAllPolicy(region, awsAccountId, restApiId, stage);
-
-        logger.info("Generated policy document: {}", policyDocument.getStatements().get(0));
-
         Map<String, String> authorizerContext = new HashMap<>();
+        authorizerContext.put("idToken", "xxxxxxxxxx");
 
-        authorizerContext.put("idToken", "token retrieved from session-db");
+        AuthPolicy authPolicy = new AuthPolicy(principalId, AuthPolicy.PolicyDocument.getAllowAllPolicy(region, awsAccountId, restApiId, stage), authorizerContext);
 
-        ApiGatewayCustomAuthorizerResponse response = new ApiGatewayCustomAuthorizerResponse(principalId, policyDocument, authorizerContext);
+        // Log the generated policy document
+        logGeneratedAuthPolicy(authPolicy);
 
-        logger.info(response.toString());
+        return authPolicy;
 
-        return response;
     }
 
     private String getSessionTokenFromCookies(APIGatewayCustomAuthorizerEvent input) {
@@ -106,5 +103,19 @@ public class BaseAPIGatewayAuthorizer implements RequestHandler<APIGatewayCustom
         }
 
         return cookieMap;
+    }
+
+    private void logGeneratedAuthPolicy(AuthPolicy authPolicy) {
+        Map<String, Object> policyDocument = authPolicy.getPolicyDocument();
+     for(Map.Entry<String, Object> entry : policyDocument.entrySet()) {
+         logger.info("Statement Key: {}", entry.getKey());
+         logger.info("Statement Value: {}", entry.getValue());
+     }
+
+     if(authPolicy.getContext() != null) {
+         authPolicy.getContext().forEach((key, value) -> logger.info("Context Key: {}, Context Value: {}", key, value));
+     }
+
+     logger.info("Principal ID: {}", authPolicy.getPrincipalId());
     }
 }
