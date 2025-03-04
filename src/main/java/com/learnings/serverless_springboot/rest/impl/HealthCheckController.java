@@ -12,4 +12,10 @@ public class HealthCheckController implements HealthCheckApi {
     public String getHealthStatus() {
         return "OK";
     }
+
+    @Override
+    @RequestMapping(value = "/public/api/v1/health-check", method = RequestMethod.GET)
+    public String getPublicHealthStatus() {
+        return "PUBLIC OK";
+    }
 }

@@ -37,7 +37,6 @@ Resources:
             Identity:
               Headers:
                 - Cookie
-        DefaultAuthorizer: CustomAuthorizer
       EndpointConfiguration:
         Type: REGIONAL
 
@@ -68,6 +67,15 @@ Resources:
             Path: /{proxy+}
             Method: ANY
             RestApiId: !Ref restApi
+            Auth:
+              Authorizer: CustomAuthorizer
+        PublicRestApiEvent:
+          Type: Api
+          Properties:
+            Path: /public/{proxy+}
+            Method: ANY
+            RestApiId: !Ref restApi
+
   # CloudWatch Log Group with retention
   lambdaFunctionLogGroup:
     Type: AWS::Logs::LogGroup
