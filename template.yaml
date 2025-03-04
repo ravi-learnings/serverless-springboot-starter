@@ -48,21 +48,6 @@ Resources:
       Stage: !Ref Environment
       BasePath: app1
 
-  restApiMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId: !Ref restApi
-      ResourceId: !GetAtt restApi.RootResourceId
-      HttpMethod: ANY
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref CustomAuthorizer
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        RequestParameters:
-          integration.request.header.X-ID-TOKEN: "context.authorizer.idToken"
-        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaFunction.Arn}/invocations
-
   lambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
