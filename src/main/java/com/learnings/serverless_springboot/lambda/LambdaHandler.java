@@ -3,6 +3,7 @@ package com.learnings.serverless_springboot.lambda;
 import com.amazonaws.serverless.exceptions.ContainerInitializationException;
 import com.amazonaws.serverless.proxy.model.AwsProxyRequest;
 import com.amazonaws.serverless.proxy.model.AwsProxyResponse;
+import com.amazonaws.serverless.proxy.model.SingleValueHeaders;
 import com.amazonaws.serverless.proxy.spring.SpringBootLambdaContainerHandler;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.Map;
 
 public class LambdaHandler implements RequestStreamHandler {
     private static final Logger logger = LoggerFactory.getLogger(LambdaHandler.class);
@@ -40,7 +42,14 @@ public class LambdaHandler implements RequestStreamHandler {
 
         logger.info("Received Request is : {}", requestEvent);
         if (requestEvent.getRequestContext() != null && requestEvent.getRequestContext().getAuthorizer() != null) {
-            logger.info("Received context is: {}", requestEvent.getRequestContext().getAuthorizer().getContextValue(("idToken")));
+            String idToken = String.valueOf(requestEvent.getRequestContext().getAuthorizer().getContextValue(("idToken")));
+            // Set idToken in the headers
+            if (idToken != null) {
+                if (requestEvent.getHeaders() == null) {
+                    requestEvent.setHeaders(new SingleValueHeaders());
+                }
+                requestEvent.getHeaders().put("X-ID-TOKEN", idToken);
+            }
         }
 
 
