@@ -1,5 +1,9 @@
 package com.learnings.serverless_springboot.rest;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 public interface HealthCheckApi {
-    String getHealthStatus();
+    String getPublicHealthStatus();
+
+    String getHealthStatus(HttpServletRequest request);
 }
