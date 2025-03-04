@@ -1,16 +1,20 @@
 package com.learnings.serverless_springboot.lambda;
 
+import com.amazonaws.serverless.proxy.model.ApiGatewayAuthorizerContext;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayCustomAuthorizerEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class BaseAPIGatewayAuthorizer implements RequestHandler<APIGatewayCustomAuthorizerEvent, AuthPolicy> {
+public class BaseAPIGatewayAuthorizer implements RequestHandler<APIGatewayCustomAuthorizerEvent, ApiGatewayCustomAuthorizerResponse> {
 
+    private static final Logger logger = LoggerFactory.getLogger(BaseAPIGatewayAuthorizer.class);
     @Override
-    public AuthPolicy handleRequest(APIGatewayCustomAuthorizerEvent input, Context context) {
+    public ApiGatewayCustomAuthorizerResponse handleRequest(APIGatewayCustomAuthorizerEvent input, Context context) {
         // Token will be provided in cookies - so retrieve the cookies "sessionToken" from the input headers
         String sessionToken = getSessionTokenFromCookies(input);
 
@@ -57,8 +61,19 @@ public class BaseAPIGatewayAuthorizer implements RequestHandler<APIGatewayCustom
         // and will apply to subsequent calls to any method/resource in the RestApi
         // made with the same token
 
-        // the example policy below denies access to all resources in the RestApi
-        return new AuthPolicy(principalId, AuthPolicy.PolicyDocument.getAllowAllPolicy(region, awsAccountId, restApiId, stage));
+        AuthPolicy.PolicyDocument policyDocument = AuthPolicy.PolicyDocument.getAllowAllPolicy(region, awsAccountId, restApiId, stage);
+
+        logger.info("Generated policy document: {}", policyDocument.getStatements().get(0));
+
+        Map<String, String> authorizerContext = new HashMap<>();
+
+        authorizerContext.put("idToken", "token retrieved from session-db");
+
+        ApiGatewayCustomAuthorizerResponse response = new ApiGatewayCustomAuthorizerResponse(principalId, policyDocument, authorizerContext);
+
+        logger.info(response.toString());
+
+        return response;
     }
 
     private String getSessionTokenFromCookies(APIGatewayCustomAuthorizerEvent input) {

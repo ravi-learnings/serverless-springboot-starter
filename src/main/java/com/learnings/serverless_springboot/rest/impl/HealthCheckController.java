@@ -1,6 +1,7 @@
 package com.learnings.serverless_springboot.rest.impl;
 
 import com.learnings.serverless_springboot.rest.HealthCheckApi;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -9,7 +10,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class HealthCheckController implements HealthCheckApi {
     @Override
     @RequestMapping(value = "/api/v1/health-check", method = RequestMethod.GET)
-    public String getHealthStatus() {
+    public String getHealthStatus(HttpServletRequest request) {
+        // loop through all the request headers and print them
+        request.getHeaderNames().asIterator().forEachRemaining(header -> {
+            System.out.println(header + " : " + request.getHeader(header));
+        });
         return "OK";
     }
 

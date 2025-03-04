@@ -63,10 +63,6 @@ public class AuthPolicy {
         this.policyDocumentObject = policyDocumentObject;
     }
 
-
-
-
-
     public static class PolicyDocument {
         static final String EXECUTE_API_ARN_FORMAT = "arn:aws:execute-api:%s:%s:%s/%s/%s/%s";
 
