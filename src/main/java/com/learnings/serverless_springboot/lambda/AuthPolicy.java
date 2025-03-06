@@ -1,5 +1,7 @@
 package com.learnings.serverless_springboot.lambda;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.*;
 
 public class AuthPolicy {
@@ -22,8 +24,20 @@ public class AuthPolicy {
     public AuthPolicy(String principalId, AuthPolicy.PolicyDocument policyDocumentObject, Map<String, String> context) {
         this.principalId = principalId;
         this.policyDocumentObject = policyDocumentObject;
-        this.context = context;
+        this.context = context != null ? context : new HashMap<>();
     }
+
+    public Map<String, Object> generatePolicy() {
+        Map<String, Object> policy = new HashMap<>();
+        Map<String, Object> policyDocumentBody = new HashMap<>();
+        policyDocumentBody.put(VERSION, this.policyDocumentObject.getVersion());
+        policyDocumentBody.put(STATEMENT, this.policyDocumentObject.getStatement());
+        policy.put("principalId", this.principalId);
+        policy.put("policyDocument", policyDocumentBody);
+        policy.put("context", this.context);
+        return policy;
+    }
+
 
     public AuthPolicy() {
     }

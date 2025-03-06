@@ -1,9 +1,11 @@
 package com.learnings.serverless_springboot.lambda;
 
-import com.amazonaws.serverless.proxy.model.ApiGatewayAuthorizerContext;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayCustomAuthorizerEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.ws.rs.ForbiddenException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,23 +25,7 @@ public class BaseAPIGatewayAuthorizer implements RequestHandler<APIGatewayCustom
         }
 
        // TODO: Implement your authorization logic here
-        // Look up the session-db using the sessionToken, if available add the actual access token in request context and add allow all policy.
-        // If sessionToken is not available or invalid, return deny policy.
-
-        // this could be accomplished in a number of ways:
-        // 1. Call out to OAuth provider
-        // 2. Decode a JWT token in-line
-        // 3. Lookup in a self-managed DB
-        String principalId = "xxxx"; // Decode the access token and use student id or name as principal id
-
-        // if the client token is not recognized or invalid
-        // you can send a 401 Unauthorized response to the client by failing like so:
-        // throw new RuntimeException("Unauthorized");
-
-        // if the token is valid, a policy should be generated which will allow or deny access to the client
-
-        // if access is denied, the client will receive a 403 Access Denied response
-        // if access is allowed, API Gateway will proceed with the back-end integration configured on the method that was called
+        String principalId = "xxxx";
 
         String methodArn = input.getMethodArn();
         String[] arnPartials = methodArn.split(":");
@@ -48,25 +34,19 @@ public class BaseAPIGatewayAuthorizer implements RequestHandler<APIGatewayCustom
         String[] apiGatewayArnPartials = arnPartials[5].split("/");
         String restApiId = apiGatewayArnPartials[0];
         String stage = apiGatewayArnPartials[1];
-//        String httpMethod = apiGatewayArnPartials[2];
-//        String resource = ""; // root resource
-//        if (apiGatewayArnPartials.length == 4) {
-//            resource = apiGatewayArnPartials[3];
-//        }
 
-        // this function must generate a policy that is associated with the recognized principal user identifier.
-        // depending on your use case, you might store policies in a DB, or generate them on the fly
+        AuthPolicy authPolicy;
 
-        // keep in mind, the policy is cached for 5 minutes by default (TTL is configurable in the authorizer)
-        // and will apply to subsequent calls to any method/resource in the RestApi
-        // made with the same token
+      if (sessionToken.equals("allow")) {
+            Map<String, String> authorizerContext = new HashMap<>();
+            authorizerContext.put("user_id", "123456789");
 
-        Map<String, String> authorizerContext = new HashMap<>();
-        authorizerContext.put("idToken", "xxxxxxxxxx");
+            authPolicy = new AuthPolicy(principalId, AuthPolicy.PolicyDocument.getAllowAllPolicy(region, awsAccountId, restApiId, stage), authorizerContext);
 
-        AuthPolicy authPolicy = new AuthPolicy(principalId, AuthPolicy.PolicyDocument.getAllowAllPolicy(region, awsAccountId, restApiId, stage), authorizerContext);
+        } else {
+            authPolicy =  new AuthPolicy(principalId, AuthPolicy.PolicyDocument.getDenyAllPolicy(region, awsAccountId, restApiId, stage), null);
+        }
 
-        // Log the generated policy document
         logGeneratedAuthPolicy(authPolicy);
 
         return authPolicy;
@@ -106,16 +86,15 @@ public class BaseAPIGatewayAuthorizer implements RequestHandler<APIGatewayCustom
     }
 
     private void logGeneratedAuthPolicy(AuthPolicy authPolicy) {
-        Map<String, Object> policyDocument = authPolicy.getPolicyDocument();
-     for(Map.Entry<String, Object> entry : policyDocument.entrySet()) {
-         logger.info("Statement Key: {}", entry.getKey());
-         logger.info("Statement Value: {}", entry.getValue());
-     }
 
-     if(authPolicy.getContext() != null) {
-         authPolicy.getContext().forEach((key, value) -> logger.info("Context Key: {}, Context Value: {}", key, value));
-     }
 
-     logger.info("Principal ID: {}", authPolicy.getPrincipalId());
+        Map<String, Object> result = authPolicy.generatePolicy();
+        try {
+            logger.info("Auth Policy: {}", new ObjectMapper().writeValueAsString(authPolicy));
+            logger.info("Generated Policy: {}", new ObjectMapper().writeValueAsString(result));
+        } catch (JsonProcessingException e) {
+
+            logger.error("Error generating policy", e);
+        }
     }
 }

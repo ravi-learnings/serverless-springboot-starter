@@ -16,6 +16,7 @@ import java.io.*;
 import java.util.Map;
 
 public class LambdaHandler implements RequestStreamHandler {
+    ObjectMapper mapper = new ObjectMapper();
     private static final Logger logger = LoggerFactory.getLogger(LambdaHandler.class);
 
     private static final String BASE_PATH = "/app1"; // adjust to your base path
@@ -38,35 +39,20 @@ public class LambdaHandler implements RequestStreamHandler {
             throws IOException {
         logger.info("Handling Request");
 
-        AwsProxyRequest requestEvent = new ObjectMapper().readValue(inputStream, AwsProxyRequest.class);
+        AwsProxyRequest requestEvent = mapper.readValue(inputStream, AwsProxyRequest.class);
 
-        logger.info("Received Request is : {}", requestEvent);
-        if (requestEvent.getRequestContext() != null && requestEvent.getRequestContext().getAuthorizer() != null) {
-            String idToken = String.valueOf(requestEvent.getRequestContext().getAuthorizer().getContextValue(("idToken")));
-            // Set idToken in the headers
-            if (idToken != null) {
-                if (requestEvent.getHeaders() == null) {
-                    requestEvent.setHeaders(new SingleValueHeaders());
-                }
-                requestEvent.getHeaders().put("X-ID-TOKEN", idToken);
-            }
-        }
+        logger.info("AwsRequestEvent is {}",mapper.writeValueAsString(requestEvent));
 
+        excludeBasePath(requestEvent);
 
+        AwsProxyResponse response = handler.proxy(requestEvent, context);
+        mapper.writeValue(outputStream, response);
+    }
+
+    private void excludeBasePath(AwsProxyRequest requestEvent) {
         String path = requestEvent.getPath();
         if (path != null && path.startsWith(BASE_PATH)) {
-            path = path.substring(BASE_PATH.length());
-            // Make sure the path starts with a slash
-            if (!path.startsWith("/")) {
-                path = "/" + path;
-            }
-            // Update the path in the request
-            requestEvent.setPath(path);
+            handler.stripBasePath(BASE_PATH);
         }
-
-        ByteArrayOutputStream modifiedRequest = new ByteArrayOutputStream();
-        new ObjectMapper().writeValue(modifiedRequest, requestEvent);
-
-        handler.proxyStream(new ByteArrayInputStream(modifiedRequest.toByteArray()), outputStream, context);
     }
 }

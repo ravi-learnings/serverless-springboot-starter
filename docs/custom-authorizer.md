@@ -36,3 +36,47 @@ For proxy integration, refer: https://docs.aws.amazon.com/apigateway/latest/deve
 
 Output format of the response from lambda function to API gateway: https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-lambda-authorizer-output.html
 
+# Accessing Authorizer Context in backend lambda function
+
+1. Once the Lambda Authorizer verifies the user request, it returns and IAM policy and a principal identifier. In addition, we can also pass context variables in the response from the Lambda Authorizer.
+2. These context variables can be accessed in the backend Lambda like below:
+
+```java
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    AwsHttpServletRequest awsRequest = (AwsHttpServletRequest) request;
+    AwsProxyRequestContext context = (AwsProxyRequestContext) awsRequest.getAttribute(RequestReader.API_GATEWAY_CONTEXT_PROPERTY);
+    
+    ApiGatewayAuthorizerContext authorizerContext = context.getAuthorizer();
+
+    String userId = authorizerContext.getContextValue("user_id");
+
+    if (userId != null) {
+        return true;
+    }
+}
+```
+
+> **Important**: The context variables are not available if we use the proxyStream method in SpringBootLambdaContainerHandler. 
+For applications that leverage context values from custom authorizers, we recommend using a stream handler: The framework uses Jackson's @JsonAnySetter/Getter annotations to extract custom values from the authorizer context, the serializer included in AWS Lambda does not process annotated fields. In all our samples, we use the RequestStreamHandler interface and the proxyStream method of the Serverless Java Container library. With a POJO-based handler, you can use the proxy method of the handler object directly.
+
+# Example
+
+```java
+    @Override
+    public void handleRequest(InputStream inputStream, OutputStream outputStream, Context context)
+            throws IOException {
+        logger.info("Handling Request");
+
+        AwsProxyRequest requestEvent = mapper.readValue(inputStream, AwsProxyRequest.class);
+
+        logger.info("AwsRequestEvent is {}",mapper.writeValueAsString(requestEvent));
+
+        excludeBasePath(requestEvent);
+
+        AwsProxyResponse response = handler.proxy(requestEvent, context);
+        mapper.writeValue(outputStream, response);
+    }
+```
+
+
