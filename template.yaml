@@ -29,6 +29,14 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: !Ref Environment
+      Auth:
+        Authorizers:
+          CustomAuthorizer:
+            FunctionArn: !GetAtt authorizerFunction.Arn
+            FunctionPayloadType: REQUEST
+            Identity:
+              Headers:
+                - Cookie
       EndpointConfiguration:
         Type: REGIONAL
 
@@ -59,12 +67,35 @@ Resources:
             Path: /{proxy+}
             Method: ANY
             RestApiId: !Ref restApi
+            Auth:
+              Authorizer: CustomAuthorizer
+        PublicRestApiEvent:
+          Type: Api
+          Properties:
+            Path: /public/{proxy+}
+            Method: ANY
+            RestApiId: !Ref restApi
+
   # CloudWatch Log Group with retention
   lambdaFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /aws/lambda/${lambdaFunction}
       RetentionInDays: !If [IsProd, 30, 3]
+
+  # Authorizer Lambda Function
+  authorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: com.learnings.serverless_springboot.lambda.BaseAPIGatewayAuthorizer::handleRequest
+      Runtime: java17
+      MemorySize: 512
+      Timeout: 30
+      Policies: AWSLambdaBasicExecutionRole
+      Environment:
+          Variables:
+            ENVIRONMENT: !Ref Environment
 
 Outputs:
   ApiEndpoint:
