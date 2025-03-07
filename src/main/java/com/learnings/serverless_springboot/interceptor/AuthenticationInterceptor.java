@@ -2,10 +2,8 @@ package com.learnings.serverless_springboot.interceptor;
 
 import com.amazonaws.serverless.proxy.RequestReader;
 import com.amazonaws.serverless.proxy.internal.servlet.AwsHttpServletRequest;
-import com.amazonaws.serverless.proxy.internal.servlet.AwsProxyHttpServletRequest;
 import com.amazonaws.serverless.proxy.model.ApiGatewayAuthorizerContext;
 import com.amazonaws.serverless.proxy.model.AwsProxyRequestContext;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
