@@ -1,7 +1,5 @@
 package com.learnings.serverless_springboot.lambda;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.util.*;
 
 public class AuthPolicy {
