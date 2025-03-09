@@ -16,9 +16,11 @@ Mappings:
     dev:
       DomainName: gateway-dev.ravilearnings.com
       CertificateArn: arn:aws:acm:us-east-1:375560204311:certificate/7ccf7bb1-55ec-4bd4-8c0d-de7c0ff6414f
+      AllowedOrigins: http://localhost:4200,http://localhost:3000,localhost,127.0.0.1
     prod:
       DomainName: gateway.ravilearnings.com
       CertificateArn: arn:aws:acm:us-east-1:375560204311:certificate/7ccf7bb1-55ec-4bd4-8c0d-de7c0ff6414f
+      AllowedOrigins: https://www.ravilearnings.com,https://ravilearnings.com,www.ravilearnings.com
 
 Conditions:
   IsProd: !Equals [!Ref Environment, prod]
@@ -56,10 +58,17 @@ Resources:
       Runtime: java17
       MemorySize: 512
       Timeout: 30
-      Policies: AWSLambdaBasicExecutionRole
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Sub school-table-${Environment}
+        - DynamoDBCrudPolicy:
+            TableName: !Sub student-table-${Environment}
       Environment:
           Variables:
             ENVIRONMENT: !Ref Environment
+            REGION: !Sub ${AWS::Region}
+            ALLOWED_ORIGINS: !FindInMap [ "DomainMapping", !Ref Environment, "AllowedOrigins" ]
       Events:
         RestApiEvent:
           Type: Api
@@ -96,6 +105,35 @@ Resources:
       Environment:
           Variables:
             ENVIRONMENT: !Ref Environment
+
+  # Dynamo DB tables
+  schoolsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub school-table-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: hashKey
+          KeyType: HASH
+      AttributeDefinitions:
+        - AttributeName: hashKey
+          AttributeType: S
+
+  studentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub student-table-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: hashKey
+          KeyType: HASH
+        - AttributeName: sortKey
+          KeyType: RANGE
+      AttributeDefinitions:
+        - AttributeName: hashKey
+          AttributeType: S
+        - AttributeName: sortKey
+          AttributeType: S
 
 Outputs:
   ApiEndpoint:

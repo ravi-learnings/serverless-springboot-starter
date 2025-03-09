@@ -1,6 +1,7 @@
 package com.learnings.serverless_springboot.config;
 
 import com.learnings.serverless_springboot.interceptor.AuthenticationInterceptor;
+import com.learnings.serverless_springboot.utils.EnvironmentUtil;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -19,10 +20,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("*")
+                .allowedOrigins(EnvironmentUtil.getAllowedOrigins())
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token")
-                .allowCredentials(false)
+                .allowCredentials(true)
                 .maxAge(3600);
     }
 }
